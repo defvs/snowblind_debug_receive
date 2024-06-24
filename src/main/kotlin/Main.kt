@@ -1,9 +1,9 @@
 import events.*
 import org.zeromq.SocketType
 import org.zeromq.ZContext
+import org.zeromq.ZMQ
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-
 
 fun main() {
     ZContext().use { context ->
@@ -11,8 +11,8 @@ fun main() {
         socket.bind("tcp://127.0.0.1:5555")
         println("Receiver is listening on tcp://127.0.0.1:5555")
 
-        while (true) {
-            val message = socket.recv(0)
+        while (!Thread.currentThread().isInterrupted) {
+            val message = socket.recv(ZMQ.DONTWAIT)
             if (message != null) {
                 val buffer = ByteBuffer.wrap(message).order(ByteOrder.LITTLE_ENDIAN)
                 val eventHeader = buffer.readClapEventHeader()
@@ -36,6 +36,9 @@ fun main() {
                     }
                     else -> println("Unknown event type: ${eventHeader.type}")
                 }
+            } else {
+                // No message received, continue looping
+                Thread.sleep(10) // Sleep to avoid busy-waiting
             }
         }
     }
